@@ -7,7 +7,7 @@
 
 **A simple way to deal with personal finances**
 
-This is a [proof-of-concept application](http://my-piggymetrics.rhcloud.com), which demonstrates [Microservice Architecture Pattern](http://martinfowler.com/microservices/) using Spring Boot, Spring Cloud and Docker.
+This is a [proof-of-concept application](https://piggymetrics.tk), which demonstrates [Microservice Architecture Pattern](http://martinfowler.com/microservices/) using Spring Boot, Spring Cloud and Docker.
 With a pretty neat user interface, by the way.
 
 ![](https://cloud.githubusercontent.com/assets/6069066/13864234/442d6faa-ecb9-11e5-9929-34a9539acde0.png)
@@ -147,7 +147,7 @@ spring:
 
 Now, on application startup, it will register with Eureka Server and provide meta-data, such as host and port, health indicator URL, home page etc. Eureka receives heartbeat messages from each instance belonging to a service. If the heartbeat fails over a configurable timetable, the instance will be removed from the registry.
 
-Also, Eureka provides a simple interface, where you can track running services and number of available instances: `http://localhost:8761`
+Also, Eureka provides a simple interface, where you can track running services and a number of available instances: `http://localhost:8761`
 
 ### Load balancer, Circuit breaker and Http client
 
@@ -204,6 +204,24 @@ Let's see our system behavior under load: Account service calls Statistics servi
 Centralized logging can be very useful when attempting to identify problems in a distributed environment. Elasticsearch, Logstash and Kibana stack lets you search and analyze your logs, utilization and network activity data with ease.
 Ready-to-go Docker configuration described [in my other project](http://github.com/sqshq/ELK-docker).
 
+### Distributed tracing
+
+Analyzing problems in distributed systems can be difficult, for example, tracing requests that propagate from one microservice to another. It can be quite a challenge to try to find out how a request travels through the system, especially if you don't have any insight into the implementation of a microservice. Even when there is logging, it is hard to tell which action correlates to a single request.
+
+[Spring Cloud Sleuth](https://cloud.spring.io/spring-cloud-sleuth/) solves this problem by providing support for distributed tracing. It adds two types of IDs to the logging: traceId and spanId. The spanId represents a basic unit of work, for example sending an HTTP request. The traceId contains a set of spans forming a tree-like structure. For example, with a distributed big-data store, a trace might be formed by a PUT request. Using traceId and spanId for each operation we know when and where our application is as it processes a request, making reading our logs much easier. 
+
+The logs are as follows, notice the `[appname,traceId,spanId,exportable]` entries from the Slf4J MDC:
+
+```text
+2018-07-26 23:13:49.381  WARN [gateway,3216d0de1384bb4f,3216d0de1384bb4f,false] 2999 --- [nio-4000-exec-1] o.s.c.n.z.f.r.s.AbstractRibbonCommand    : The Hystrix timeout of 20000ms for the command account-service is set lower than the combination of the Ribbon read and connect timeout, 80000ms.
+2018-07-26 23:13:49.562  INFO [account-service,3216d0de1384bb4f,404ff09c5cf91d2e,false] 3079 --- [nio-6000-exec-1] c.p.account.service.AccountServiceImpl   : new account has been created: test
+```
+
+- *`appname`*: The name of the application that logged the span from the property `spring.application.name`
+- *`traceId`*: This is an ID that is assigned to a single request, job, or action
+- *`spanId`*: The ID of a specific operation that took place
+- *`exportable`*: Whether the log should be exported to [Zipkin](https://zipkin.io/)
+
 ## Security
 
 An advanced security configuration is beyond the scope of this proof-of-concept project. For a more realistic simulation of a real system, consider to use https, JCE keystore to encrypt Microservices passwords and Config server properties content (see [documentation](http://cloud.spring.io/spring-cloud-config/spring-cloud-config.html#_security) for details).
@@ -243,8 +261,7 @@ If you'd like to build images yourself (with some changes in the code, for examp
 #### Important endpoints
 - http://localhost:80 - Gateway
 - http://localhost:8761 - Eureka Dashboard
-- http://localhost:9000/hystrix - Hystrix Dashboard (paste Turbine stream link on the form)
-- http://localhost:8989 - Turbine stream (source for the Hystrix Dashboard)
+- http://localhost:9000/hystrix - Hystrix Dashboard (Turbine stream link: `http://turbine-stream-service:8080/turbine/turbine.stream`)
 - http://localhost:15672 - RabbitMq management (default login/password: guest/guest)
 
 #### Notes
@@ -252,6 +269,6 @@ All Spring Boot applications require already running [Config Server](https://git
 
 Also, Service Discovery mechanism needs some time after all applications startup. Any service is not available for discovery by clients until the instance, the Eureka server and the client all have the same metadata in their local cache, so it could take 3 heartbeats. Default heartbeat period is 30 seconds.
 
-## Feedback welcome
+## Contributions welcome!
 
-PiggyMetrics is open source, and would greatly appreciate your help. Feel free to contact me with any questions.
+PiggyMetrics is open source, and would greatly appreciate your help. Feel free to suggest and implement improvements.
